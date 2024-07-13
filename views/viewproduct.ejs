@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View product</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.1/dist/jquery.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+        body {
+            background-image: url(/images/med9.jpg);
+        }
+        #c1 {
+            background-color: white;
+        }
+        #search-bar {
+            width: 300px;
+            margin-right: 10px;
+            float: right;
+            border: 0;
+        }
+    </style>
+</head>
+<body>
+    <%- include('./layout/navbar') %>
+    <div class="container mt-4" id="c1">
+        <input type="text" id="search-bar" placeholder="Search for medicine...">
+        <table id="product-table" class="table table-bordered table-hover">
+            <thead class="text-center">
+                <tr>
+                    <th>SI NO</th>
+                    <th>MEDICINE NAME</th>
+                    <th>PRICE</th>
+                    <th>COMPANY</th>
+                    <th>EXPIRY DATE</th>
+                    <th>ADDED TIME</th>
+                    <th>AVAILABLE STOCK</th>
+                    <th></th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody class="text-center">
+                <% data.forEach((product) => { %>
+                    <tr>
+                        <td><%= product.uniqueid %></td>
+                        <td><%= product.medicinename %></td>
+                        <td><%= product.price %></td>
+                        <td><%= product.company %></td>
+                        <td><%= product.expirydate.toISOString().slice(0, 10) %></td>
+                        <td><%= product.addedtime.toUTCString() %></td>
+                        <td><%= product.stock %></td>
+                        <td><a href="updateproduct/<%= product.id %>" class="btn btn-warning">Update</a></td>
+                        <td>
+                            <button type="button" class="btn btn-danger" data-toggle="modal" data-target="#delete-modal-<%= product.id %>">Delete</button>
+                        </td>
+                    </tr>
+                    <div id="delete-modal-<%= product.id %>" class="modal fade">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h3 class="modal-title">Are you sure you want to delete?</h3>
+                                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                                </div>
+                                <div class="modal-footer justify-content-between">
+                                    <a href="deleteproduct/<%= product.id %>" class="btn btn-success">Ok</a>
+                                    <button type="button" class="btn btn-danger" data-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                <% }) %>
+            </tbody>
+        </table>
+        <% if (currentPage > 1) { %>
+            <a href="/Viewproduct/<%= id %>?page=<%= currentPage - 1 %>&limit=<%= limit %>">&laquo;</a>
+        <% } %>
+        Page <%= currentPage %> of <%= totalPages %>
+        <% if (currentPage < totalPages) { %>
+            <a href="/Viewproduct/<%= id %>?page=<%= currentPage + 1 %>&limit=<%= limit %>">&raquo;</a>
+        <% } %>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const searchBar = document.getElementById('search-bar');
+            const productTableBody = document.querySelector('#product-table tbody');
+            const userId = '<%= data[0] ? data[0].userid : "" %>'; // Get user ID from the first product
+
+            searchBar.addEventListener('input', () => {
+                const query = searchBar.value;
+
+                if (query.length === 0) {
+                    // Restore the original table contents if search is empty
+                    productTableBody.innerHTML = `
+                        <% data.forEach((product) => { %>
+                            <tr>
+                                <td><%= product.uniqueid %></td>
+                                <td><%= product.medicinename %></td>
+                                <td><%= product.price %></td>
+                                <td><%= product.company %></td>
+                                <td><%= product.expirydate.toISOString().slice(0, 10) %></td>
+                                <td><%= product.addedtime.toUTCString() %></td>
+                                <td><%= product.stock %></td>
+                                <td><a href="updateproduct/<%= product.id %>" class="btn btn-warning">Update</a></td>
+                                <td>
+                                    <button type="button" class="btn btn-danger" data-toggle="modal" data-target="#delete-modal-<%= product.id %>">Delete</button>
+                                </td>
+                            </tr>
+                            <div id="delete-modal-<%= product.id %>" class="modal fade">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h3 class="modal-title">Are you sure you want to delete?</h3>
+                                            <button type="button" class="close" data-dismiss="modal">&times;</button>
+                                        </div>
+                                        <div class="modal-footer justify-content-between">
+                                            <a href="deleteproduct/<%= product.id %>" class="btn btn-success">Ok</a>
+                                            <button type="button" class="btn btn-danger" data-dismiss="modal">Close</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        <% }) %>
+                    `;
+                    return;
+                }
+
+                axios.get(`/searchProducts?q=${query}&userid=${userId}`)
+                    .then(response => {
+                        const products = response.data;
+                        productTableBody.innerHTML = '';
+
+                        products.forEach(product => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${product.uniqueid}</td>
+                                <td>${product.medicinename}</td>
+                                <td>${product.price}</td>
+                                <td>${product.company}</td>
+                                <td>${new Date(product.expirydate).toISOString().slice(0, 10)}</td>
+                                <td>${new Date(product.addedtime).toUTCString()}</td>
+                                <td>${product.stock}</td>
+                                <td><a href="updateproduct/${product._id}" class="btn btn-warning">Update</a></td>
+                                <td>
+                                    <button type="button" class="btn btn-danger" data-toggle="modal" data-target="#delete-modal">Delete</button>
+                                </td>
+                            `;
+                            const modalHTML = `
+                                <div id="delete-modal" class="modal fade">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h3 class="modal-title">Are you sure you want to delete?</h3>
+                                                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                                            </div>
+                                            <div class="modal-footer justify-content-between">
+                                                <a href="deleteproduct/${product._id}" class="btn btn-success">Ok</a>
+                                                <button type="button" class="btn btn-danger" data-dismiss="modal">Close</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                            productTableBody.appendChild(row);
+                            productTableBody.insertAdjacentHTML('beforeend', modalHTML);
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error fetching products:', error);
+                    });
+            });
+        });
+    </script>
+</body>
+</html>
